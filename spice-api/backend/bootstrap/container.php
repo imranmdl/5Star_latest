@@ -14,8 +14,10 @@ use App\Services\Notifications\NotificationPolicy;
 use App\Services\Notifications\SmsChannel;
 use App\Repositories\SettingRepository;
 use App\Services\Delivery\CourierAdapterInterface;
+use App\Services\Delivery\ManualCourierAdapter;
 use App\Services\Delivery\SandboxCourierAdapter;
 use App\Services\Delivery\ShiprocketAdapter;
+use App\Services\Payments\ManualGateway;
 use App\Services\Payments\PaymentGatewayInterface;
 use App\Services\Payments\RazorpayGateway;
 use App\Services\Payments\SandboxGateway;
@@ -45,13 +47,21 @@ $container->bind(Database::class, static function (Container $c): Database {
 // The payment gateway is chosen at runtime from a setting, so switching
 // provider is a configuration change rather than a deployment. Everything above
 // this line speaks only to PaymentGatewayInterface.
+//
+// The driver name itself has two sources: the `PAYMENT_DRIVER` env var (set at
+// deploy time) and the `payment_driver` row in `settings` (editable from the
+// admin console at /admin/settings without a redeploy). The DB value wins when
+// present, which is what lets an administrator flip manual -> razorpay -> sandbox
+// from a browser once Razorpay is ready, rather than needing SSH every time.
 $container->bind(PaymentGatewayInterface::class, static function (Container $c): PaymentGatewayInterface {
     /** @var Config $config */
     $config = $c->get(Config::class);
     /** @var Logger $logger */
     $logger = $c->get(Logger::class);
+    /** @var SettingRepository $settings */
+    $settings = $c->get(SettingRepository::class);
 
-    $driver = (string) $config->get('payment.driver', 'sandbox');
+    $driver = $settings->value('payment_driver') ?? (string) $config->get('payment.driver', 'sandbox');
 
     return match ($driver) {
         'razorpay' => new RazorpayGateway(
@@ -66,20 +76,51 @@ $container->bind(PaymentGatewayInterface::class, static function (Container $c):
             (string) $config->get('app.env', 'production'),
             $logger,
         ),
+        'manual' => new ManualGateway(
+            (string) ($settings->value('manual_payment_qr_url') ?? ''),
+            (string) ($settings->value('manual_payment_vpa') ?? ''),
+            (string) ($settings->value('manual_payment_payee_name') ?? 'Anjeera Dry Fruits'),
+            $logger,
+        ),
         default => throw new RuntimeException(
-            'Unknown payment gateway "' . $driver . '". Set PAYMENT_DRIVER to razorpay or sandbox.'
+            'Unknown payment gateway "' . $driver . '". Set PAYMENT_DRIVER (or the payment_driver '
+            . 'setting) to razorpay, sandbox, or manual.'
         ),
     };
 });
 
-// Courier adapter, chosen at runtime the same way the payment gateway is.
+// ManualGateway is also bound directly under its own class name, independent
+// of which driver PaymentGatewayInterface currently resolves to. The admin
+// payment-verification screen needs to build a manual PaymentVerification
+// (via verifyByAdmin) even when the store has since been switched to
+// razorpay for new orders — an in-flight manual payment placed before the
+// cutover still has to be confirmable.
+$container->bind(ManualGateway::class, static function (Container $c): ManualGateway {
+    /** @var Logger $logger */
+    $logger = $c->get(Logger::class);
+    /** @var SettingRepository $settings */
+    $settings = $c->get(SettingRepository::class);
+
+    return new ManualGateway(
+        (string) ($settings->value('manual_payment_qr_url') ?? ''),
+        (string) ($settings->value('manual_payment_vpa') ?? ''),
+        (string) ($settings->value('manual_payment_payee_name') ?? 'Anjeera Dry Fruits'),
+        $logger,
+    );
+});
+
+// Courier adapter, chosen at runtime the same way the payment gateway is —
+// COURIER_DRIVER env var, overridable from the admin console via the
+// `delivery_driver` setting.
 $container->bind(CourierAdapterInterface::class, static function (Container $c): CourierAdapterInterface {
     /** @var Config $config */
     $config = $c->get(Config::class);
     /** @var Logger $logger */
     $logger = $c->get(Logger::class);
+    /** @var SettingRepository $settings */
+    $settings = $c->get(SettingRepository::class);
 
-    $driver = (string) $config->get('delivery.driver', 'sandbox');
+    $driver = $settings->value('delivery_driver') ?? (string) $config->get('delivery.driver', 'sandbox');
 
     return match ($driver) {
         'shiprocket' => new ShiprocketAdapter(
@@ -87,7 +128,7 @@ $container->bind(CourierAdapterInterface::class, static function (Container $c):
             (string) $config->get('delivery.shiprocket.password', ''),
             (string) $config->get('delivery.shiprocket.webhook_secret', ''),
             (string) $config->get('delivery.shiprocket.pickup_location', 'Primary'),
-            $c->get(SettingRepository::class),
+            $settings,
             $logger,
             (int) $config->get('delivery.timeout_seconds', 25),
         ),
@@ -96,8 +137,10 @@ $container->bind(CourierAdapterInterface::class, static function (Container $c):
             (string) $config->get('app.env', 'production'),
             $logger,
         ),
+        'manual' => new ManualCourierAdapter($logger),
         default => throw new RuntimeException(
-            'Unknown courier adapter "' . $driver . '". Set COURIER_DRIVER to shiprocket or sandbox.'
+            'Unknown courier adapter "' . $driver . '". Set COURIER_DRIVER (or the delivery_driver '
+            . 'setting) to shiprocket, sandbox, or manual.'
         ),
     };
 });

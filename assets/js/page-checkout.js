@@ -286,6 +286,15 @@ async function startPayment() {
     return;
   }
 
+  const isManual = payment.gateway === 'manual';
+
+  // qr_payload is either a raw UPI string (sandbox/razorpay — shown as text,
+  // since there's no image to fetch) or, for the manual gateway, the URL of
+  // the admin-uploaded QR image. Rendering a URL as text would show the
+  // customer a link instead of a scannable code, so branch on shape.
+  const isQrImageUrl = isManual && typeof payment.qr_payload === 'string'
+    && /^https?:\/\//i.test(payment.qr_payload);
+
   root.innerHTML = `
     <div class="row justify-content-center">
       <div class="col-12 col-md-7 col-lg-5">
@@ -294,12 +303,25 @@ async function startPayment() {
             <h1 class="h5">Pay ${formatMoney(payment.amount)}</h1>
             <p class="text-muted small">Order ${escapeHtml(state.order.order_number)}</p>
 
-            ${payment.upi_intent_url ? `
+            ${!isManual && payment.upi_intent_url ? `
               <a class="btn btn-spice btn-lg w-100 my-3" href="${escapeHtml(payment.upi_intent_url)}">
                 Pay with a UPI app
               </a>` : ''}
 
-            ${payment.qr_payload ? `
+            ${isQrImageUrl ? `
+              <p class="small text-muted mb-2">Scan this QR code with any UPI app to pay.</p>
+              <img src="${escapeHtml(payment.qr_payload)}" alt="Payment QR code"
+                   class="img-fluid rounded border mb-3" style="max-width: 260px;">
+              ${payment.upi_intent_url ? `
+                <a class="btn btn-outline-spice btn-sm w-100 mb-3" href="${escapeHtml(payment.upi_intent_url)}">
+                  Or pay with a UPI app
+                </a>` : ''}
+              <p class="small text-muted">
+                After paying, keep your payment reference handy — our team verifies manual
+                payments and confirms your order, usually within a few hours.
+              </p>` : ''}
+
+            ${!isManual && payment.qr_payload ? `
               <p class="small text-muted">Or scan this with any UPI app.</p>
               <div class="border rounded p-3 mb-3 text-break small font-monospace">
                 ${escapeHtml(payment.qr_payload)}
@@ -319,7 +341,7 @@ async function startPayment() {
       </div>
     </div>`;
 
-  pollForConfirmation();
+  pollForConfirmation(0, isManual);
 }
 
 /**
@@ -330,8 +352,13 @@ async function startPayment() {
  * whether or not this page is still open. Polling the order is the honest way
  * to find out; treating our own callback as proof would show "confirmed" for a
  * payment that never settled.
+ *
+ * isManual widens the window before giving up: an automated gateway settles in
+ * seconds, but a manual QR payment waits on an administrator to look at it,
+ * which routinely takes longer than 30 seconds. Giving up too early on manual
+ * mode would tell a customer who has genuinely paid that something's wrong.
  */
-async function pollForConfirmation(attempt = 0) {
+async function pollForConfirmation(attempt = 0, isManual = false) {
   const statusEl = root.querySelector('[data-payment-status]');
   if (!statusEl) return;
 
@@ -353,18 +380,22 @@ async function pollForConfirmation(attempt = 0) {
     // A failed poll is not a failed payment. Keep waiting.
   }
 
-  if (attempt >= 15) {
-    // Give up on the page, not on the order. The webhook may still arrive, and
-    // saying so is more honest than an indefinite spinner.
+  const maxAttempts = isManual ? 40 : 15; // manual: ~4 min of active polling before we stop nagging the server
+  const intervalMs = isManual ? 5000 : 2000;
+
+  if (attempt >= maxAttempts) {
     statusEl.className = 'alert alert-info small mb-0';
-    statusEl.innerHTML = `
-      We have not seen your payment yet. If money has left your account it will be
-      matched automatically within a few minutes and we will message you.
-      <a href="orders.html" class="d-block mt-2">Check your orders</a>`;
+    statusEl.innerHTML = isManual
+      ? `We have not confirmed your payment yet. Our team reviews manual payments
+         within a few hours and will message you as soon as it is verified.
+         <a href="orders.html" class="d-block mt-2">Check your orders</a>`
+      : `We have not seen your payment yet. If money has left your account it will be
+         matched automatically within a few minutes and we will message you.
+         <a href="orders.html" class="d-block mt-2">Check your orders</a>`;
     return;
   }
 
-  setTimeout(() => pollForConfirmation(attempt + 1), 2000);
+  setTimeout(() => pollForConfirmation(attempt + 1, isManual), intervalMs);
 }
 
 function renderConfirmed(order) {

@@ -14,9 +14,19 @@ use App\Core\Env;
  * `sandbox` settles payments locally and refuses to construct outside a local or
  * testing environment, so pointing production at it fails loudly at boot rather
  * than silently accepting orders nobody paid for.
+ *
+ * `manual` is the staff-verified UPI QR mode: a customer scans an admin-uploaded
+ * QR code and pays outside this system; an administrator confirms the transfer
+ * from /admin/payments/pending before the order is allowed to proceed. It is
+ * meant as a bridge while Razorpay is being finished, not a permanent choice —
+ * see GO_LIVE.md for the cutover to `razorpay`.
+ *
+ * The driver here is only the DEPLOY-TIME default. It can be overridden per
+ * environment without a redeploy via the `payment_driver` row in `settings`,
+ * editable from /admin/settings (see SettingsController).
  */
 return [
-    'driver' => Env::get('PAYMENT_DRIVER', 'sandbox'),
+    'driver' => Env::get('PAYMENT_DRIVER', 'manual'),
     'currency' => Env::get('PAYMENT_CURRENCY', 'INR'),
     'timeout_seconds' => Env::int('PAYMENT_TIMEOUT_SECONDS', 20),
 

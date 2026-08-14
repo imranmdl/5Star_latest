@@ -224,6 +224,40 @@ final class PaymentService
     }
 
     /**
+     * Confirms or rejects a manual payment on an administrator's authority.
+     *
+     * This is the only way a manual-gateway order reaches PAID: there is no
+     * webhook and no signature to check, so the PaymentVerification an admin
+     * action produces goes through exactly the same applyVerification() choke
+     * point as a Razorpay webhook does. Nothing about BR-005 is relaxed for
+     * the other gateways by this method existing — it only ever runs against
+     * whichever PaymentVerification ManualPaymentService hands it, and that
+     * verification can only be minted by ManualGateway::verifyByAdmin(), which
+     * ManualPaymentService only calls after checking the caller is an
+     * authenticated administrator.
+     *
+     * @return array<string, mixed>
+     */
+    public function applyAdminVerification(array $order, PaymentVerification $verification, Request $request): array
+    {
+        $this->applyVerification($order, $verification, $request, 'admin_manual');
+
+        $fresh = (array) $this->orders->findById((int) $order['id']);
+
+        return [
+            'order' => [
+                'uuid' => $fresh['uuid'],
+                'order_number' => $fresh['order_number'],
+                'status' => $fresh['status'],
+                'status_label' => OrderStatus::label((string) $fresh['status']),
+                'payment_status' => $fresh['payment_status'],
+                'invoice_number' => $fresh['invoice_number'],
+            ],
+            'payment' => $verification->toArray(),
+        ];
+    }
+
+    /**
      * Handles an inbound webhook. This is the authoritative path.
      *
      * Unauthenticated by design — the gateway has no bearer token. The

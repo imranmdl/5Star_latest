@@ -46,6 +46,38 @@ final class PaymentRepository extends BaseRepository
         );
     }
 
+    /**
+     * Manual-gateway payment attempts an administrator has not yet verified or
+     * rejected. Used by the /admin/payments/pending queue.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function pendingManualVerification(int $limit = 100, int $offset = 0): array
+    {
+        return $this->db->select(
+            sprintf(
+                "SELECT p.*, o.order_number, o.uuid AS order_uuid, o.ship_name, o.ship_mobile
+                   FROM `payments` p
+                   JOIN `orders` o ON o.id = p.order_id
+                  WHERE p.`gateway` = 'manual'
+                    AND p.`status` IN ('created', 'pending')
+                    AND p.`is_deleted` = 0
+                  ORDER BY p.`created_date` ASC
+                  LIMIT %d OFFSET %d",
+                max(1, $limit),
+                max(0, $offset)
+            )
+        );
+    }
+
+    public function countPendingManualVerification(): int
+    {
+        return (int) $this->db->scalar(
+            "SELECT COUNT(*) FROM `payments`
+              WHERE `gateway` = 'manual' AND `status` IN ('created', 'pending') AND `is_deleted` = 0"
+        );
+    }
+
     /** @return array<int, array<string, mixed>> */
     public function forOrder(int $orderId): array
     {

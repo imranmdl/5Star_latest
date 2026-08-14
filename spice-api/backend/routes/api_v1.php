@@ -14,12 +14,14 @@ use App\Controllers\Api\V1\CommissionController;
 use App\Controllers\Api\V1\CourierController;
 use App\Controllers\Api\V1\CheckoutController;
 use App\Controllers\Api\V1\HealthController;
+use App\Controllers\Api\V1\ManualPaymentController;
 use App\Controllers\Api\V1\PromotionController;
 use App\Controllers\Api\V1\NotificationController;
 use App\Controllers\Api\V1\OrderController;
 use App\Controllers\Api\V1\ProductController;
 use App\Controllers\Api\V1\ReportController;
 use App\Controllers\Api\V1\ReviewController;
+use App\Controllers\Api\V1\SettingsController;
 use App\Controllers\Api\V1\ShipmentController;
 use App\Controllers\Api\V1\StaffController;
 use App\Controllers\Api\V1\SupportController;
@@ -287,6 +289,29 @@ return static function (Router $router): void {
         $router->get('/admin/orders/{uuid}/invoice', [OrderController::class, 'adminInvoice'], $staff);
         $router->post('/admin/orders/{uuid}/status', [OrderController::class, 'adminAdvance'], $staff);
         $router->post('/admin/orders/{uuid}/cancel', [OrderController::class, 'adminCancel'], $staff);
+
+        // --- Manual payment verification (administrator only) ---------------
+        // The whole security model for the manual QR gateway is that only an
+        // administrator can turn a pending attempt into a confirmed payment —
+        // see ManualGateway and ManualPaymentService. Not opened to
+        // supervisor/executive the way order status routes are.
+        $router->get('/admin/payments/pending', [ManualPaymentController::class, 'pending'], $administrator);
+        $router->post('/admin/payments/{uuid}/verify', [ManualPaymentController::class, 'verify'], $administrator);
+        $router->post('/admin/payments/{uuid}/reject', [ManualPaymentController::class, 'reject'], $administrator);
+
+        // --- Runtime settings (administrator only) ---------------------------
+        // Lets payment_driver / delivery_driver be flipped between
+        // manual/sandbox/razorpay/shiprocket from the admin console, without a
+        // redeploy. See SettingsService and bootstrap/container.php.
+        $router->get('/admin/settings', [SettingsController::class, 'index'], $administrator);
+        $router->patch('/admin/settings/payment-driver', [SettingsController::class, 'setPaymentDriver'], $administrator);
+        $router->patch('/admin/settings/delivery-driver', [SettingsController::class, 'setDeliveryDriver'], $administrator);
+        $router->patch('/admin/settings/manual', [SettingsController::class, 'updateManual'], $administrator);
+        $router->post(
+            '/admin/settings/manual/qr-image',
+            [SettingsController::class, 'setManualQrImage'],
+            array_merge($administrator, ['throttle:20,600'])
+        );
 
         // --- Review moderation --------------------------------------------------
         $router->get('/admin/reviews', [ReviewController::class, 'queue'], $staff);

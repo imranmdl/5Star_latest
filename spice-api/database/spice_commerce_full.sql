@@ -5778,6 +5778,40 @@ ON DUPLICATE KEY UPDATE
     `version` = `notification_templates`.`version` + 1;
 
 
+-- ==========================================================================
+--  012_manual_payment_delivery_seed.sql
+--
+--  Lets the store take payment and ship parcels before Razorpay/Shiprocket
+--  credentials exist: a staff-verified UPI QR code and manual dispatch,
+--  toggled from /admin/settings without a redeploy. See ManualGateway,
+--  ManualCourierAdapter, SettingsService and bootstrap/container.php.
+--
+--  The customer-facing "delivers in N-M days" estimate is unaffected by this
+--  block — it comes from delivery_zones above, which is courier-independent.
+--
+--  Values are left alone on re-import (only description/is_public refresh),
+--  so re-running this file never clobbers a driver an admin has since
+--  switched away from manual.
+-- ==========================================================================
+
+INSERT INTO `settings` (`uuid`, `group_code`, `setting_key`, `setting_value`, `data_type`, `description`, `is_public`)
+VALUES
+    (UUID(), 'commerce', 'payment_driver',            'manual',              'string',
+     'Active payment gateway: manual, sandbox, or razorpay. Editable from /admin/settings.', 0),
+    (UUID(), 'commerce', 'delivery_driver',           'manual',              'string',
+     'Active courier adapter: manual, sandbox, or shiprocket. Editable from /admin/settings.', 0),
+    (UUID(), 'commerce', 'manual_payment_vpa',        '',                    'string',
+     'UPI VPA shown under the manual payment QR code.', 0),
+    (UUID(), 'commerce', 'manual_payment_payee_name', 'Anjeera Dry Fruits',  'string',
+     'Payee name shown alongside the manual payment QR code.', 0),
+    (UUID(), 'commerce', 'manual_payment_qr_path',    NULL,                  'string',
+     'Storage path of the admin-uploaded manual payment QR image.', 0)
+ON DUPLICATE KEY UPDATE
+    `description` = VALUES(`description`),
+    `is_public`   = VALUES(`is_public`),
+    `version`     = `settings`.`version` + 1;
+
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================================

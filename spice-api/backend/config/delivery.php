@@ -14,9 +14,19 @@ use App\Core\Env;
  * `sandbox` books deterministically and refuses to construct outside a local or
  * testing environment, so a production deployment left pointing at it fails at
  * boot rather than filling a warehouse with parcels carrying fake AWBs.
+ *
+ * `manual` runs with no courier API at all: staff hand parcels to a courier
+ * outside this system and enter tracking details themselves. Customers see a
+ * static "manual_delivery_min_days-manual_delivery_max_days business days"
+ * estimate instead of a live serviceability check. Meant as a bridge while
+ * Shiprocket is being finished — see GO_LIVE.md for the cutover to `shiprocket`.
+ *
+ * The driver here is only the DEPLOY-TIME default; it can be overridden per
+ * environment without a redeploy via the `delivery_driver` row in `settings`,
+ * editable from /admin/settings.
  */
 return [
-    'driver' => Env::get('COURIER_DRIVER', 'sandbox'),
+    'driver' => Env::get('COURIER_DRIVER', 'manual'),
     'timeout_seconds' => Env::int('COURIER_TIMEOUT_SECONDS', 25),
 
     'shiprocket' => [
