@@ -1,0 +1,29 @@
+{
+    "name": "spice-commerce/backend",
+    "description": "Spice & Dry Fruits Commerce Platform - API-first backend",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.3",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-curl": "*",
+        "ext-openssl": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "serve": "php -S 127.0.0.1:8080 -t public",
+        "migrate": "php bin/migrate.php",
+        "seed-admin": "php bin/seed_admin.php"
+    }
+}

@@ -1,0 +1,309 @@
+/*
+ * Admin console — visual system imported from "Anjeera Dry Fruits v2".
+ *
+ * The design's second turn is the admin panel itself, so this follows it
+ * directly: a deep forest sidebar, warm parchment working area, white cards with
+ * sand borders, and the same Marcellus/Karla pairing as the shop.
+ *
+ * THIS FILE IS THE ONLY THING THAT CHANGED.
+ *
+ * Every screen's markup already carried semantic class names, so the whole
+ * import is a stylesheet swap: no API call, field name, event handler or page
+ * flow is touched. That matters because the console is where orders get packed
+ * and money gets refunded, and a restyle has no business risking any of it.
+ *
+ * The console stays deliberately denser than the shop. This is a tool someone
+ * uses for hours, not a shop window — so the type is smaller, the rows tighter,
+ * and the gold is used only where it carries meaning.
+ */
+
+:root {
+  /* Sidebar is darker than the shop's header: it sits beside content all day
+     and needs to recede rather than compete. */
+  --rail:          #072A21;
+  --forest:        #0B3B2E;
+  --forest-soft:   #3A4238;
+
+  --gold:          #C9A253;
+  --gold-light:    #E4C77E;
+  --gold-dark:     #8A6A1F;
+
+  --work:          #F6F2E7;
+  --surface:       #FFFFFF;
+  --tint:          #EFE9DA;
+  --sand:          #E3DAC5;
+  --sand-2:        #DCD3BF;
+
+  --ink:           #23231F;
+  --muted:         #7E857A;
+  --muted-2:       #5C6459;
+
+  --r-card:        12px;
+  --r-control:     9px;
+  --r-pill:        20px;
+}
+
+body {
+  background: var(--work);
+  color: var(--forest-soft);
+  font-family: Karla, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .display-face {
+  font-family: Marcellus, Georgia, serif;
+  font-weight: 400;
+  color: var(--forest);
+  letter-spacing: .01em;
+}
+
+h1 { font-size: 30px; line-height: 1.1; }
+
+/* Half this interface is quantities and money that must line up in a column. */
+.num, .price, td, th, input[type="number"],
+.summary-row, .table-tight td, .table-tight th {
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--gold-dark);
+}
+
+a { color: var(--forest); }
+a:hover { color: var(--gold-dark); }
+.text-muted { color: var(--muted) !important; }
+
+/* ---------------------------------------------------------------------------
+   Sidebar
+   --------------------------------------------------------------------------- */
+
+.console-sidebar {
+  background: var(--rail);
+  width: 250px;
+  padding: 20px 10px 18px;
+  color: #FBF7EE;
+}
+
+.console-sidebar > .fw-semibold:first-child {
+  font-family: Marcellus, Georgia, serif;
+  font-size: 17px;
+  font-weight: 400 !important;
+  letter-spacing: .03em;
+  color: var(--gold-light);
+  padding: 0 10px 12px;
+}
+
+/* A left accent bar rather than a filled pill: it marks the active screen
+   without turning the rail into a block of colour. */
+.console-sidebar .nav-link {
+  color: rgba(251, 247, 238, .78);
+  border-radius: var(--r-control);
+  border-left: 3px solid transparent;
+  padding: 10px 12px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.console-sidebar .nav-link span {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(251, 247, 238, .5);
+}
+
+.console-sidebar .nav-link:hover {
+  background: rgba(201, 162, 83, .12);
+  color: #fff;
+}
+
+.console-sidebar .nav-link.active {
+  background: rgba(201, 162, 83, .16);
+  border-left-color: var(--gold);
+  color: var(--gold-light);
+}
+
+.console-sidebar .nav-link.active span { color: rgba(228, 199, 126, .7); }
+
+.console-sidebar hr {
+  border-color: rgba(201, 162, 83, .28);
+  opacity: 1;
+  margin: 14px 0 0;
+}
+
+.console-sidebar .small { font-size: 12px; }
+.console-sidebar .text-white { color: var(--gold-light) !important; }
+
+.console-sidebar .btn-outline-light {
+  border-color: rgba(201, 162, 83, .45);
+  color: var(--gold-light);
+  border-radius: var(--r-pill);
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.console-sidebar .btn-outline-light:hover {
+  background: rgba(201, 162, 83, .16);
+  color: var(--gold-light);
+}
+
+@media (max-width: 991.98px) {
+  .console-sidebar { width: auto; }
+}
+
+/* ---------------------------------------------------------------------------
+   Cards and tables
+   --------------------------------------------------------------------------- */
+
+.card, .panel {
+  background: var(--surface);
+  border: 1px solid var(--sand);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.card-header, .panel-head {
+  background: var(--surface);
+  border-bottom: 1px solid var(--tint);
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.card-footer { background: var(--surface); border-top-color: var(--tint); }
+
+.table-tight td, .table-tight th { padding: 10px 14px; vertical-align: middle; }
+.table-tight tbody tr { border-color: var(--tint); }
+
+.table-tight th {
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--gold-dark);
+  border-bottom-color: var(--sand);
+}
+
+.table-hover tbody tr:hover > * { background: var(--tint); }
+
+.needs-attention { border-left: 3px solid var(--gold); }
+
+/* ---------------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------------- */
+
+.btn { border-radius: var(--r-pill); font-weight: 700; font-size: 13px; min-height: 40px; }
+.btn-sm { min-height: 36px; font-size: 12.5px; padding-inline: 12px; }
+
+.btn-dark, .btn-primary {
+  background: var(--forest);
+  border-color: var(--forest);
+  color: var(--gold-light);
+}
+
+.btn-dark:hover, .btn-dark:focus,
+.btn-primary:hover, .btn-primary:focus {
+  background: #061F18;
+  border-color: #061F18;
+  color: var(--gold-light);
+}
+
+.btn-outline-secondary {
+  border-color: var(--sand-2);
+  color: var(--forest-soft);
+  background: var(--surface);
+}
+
+.btn-outline-secondary:hover {
+  background: var(--tint);
+  border-color: var(--gold);
+  color: var(--forest);
+}
+
+.btn-success { background: var(--forest); border-color: var(--forest); color: var(--gold-light); }
+.btn-success:hover { background: #061F18; border-color: #061F18; color: var(--gold-light); }
+
+/* Destructive actions keep a real red. Cancelling an order and refunding money
+   should never look like every other button on the page. */
+.btn-outline-danger { border-color: #A6291F; color: #A6291F; }
+.btn-outline-danger:hover { background: #A6291F; border-color: #A6291F; color: #fff; }
+
+.btn-link { color: var(--gold-dark); }
+
+.form-control, .form-select {
+  border-color: var(--sand-2);
+  border-radius: var(--r-control);
+  min-height: 40px;
+  font-size: 14px;
+  background: var(--surface);
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 83, .18);
+}
+
+.form-control-sm, .form-select-sm { min-height: 36px; font-size: 13px; }
+.form-label { font-size: 13px; font-weight: 600; color: var(--forest-soft); }
+.form-text { color: var(--muted); font-size: 12px; }
+
+.nav-tabs { border-bottom-color: var(--sand); }
+
+.nav-tabs .nav-link {
+  color: var(--muted-2);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.nav-tabs .nav-link:hover { color: var(--forest); border-bottom-color: var(--sand-2); }
+
+.nav-tabs .nav-link.active {
+  color: var(--forest);
+  background: transparent;
+  border-bottom-color: var(--gold);
+}
+
+/* ---------------------------------------------------------------------------
+   Status
+   --------------------------------------------------------------------------- */
+
+.badge {
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  letter-spacing: .02em;
+}
+
+.text-bg-success   { background: var(--forest) !important; color: var(--gold-light) !important; }
+.text-bg-primary   { background: var(--gold-dark) !important; color: #fff !important; }
+.text-bg-info      { background: var(--tint) !important; color: var(--gold-dark) !important; }
+.text-bg-warning   { background: var(--gold) !important; color: var(--forest) !important; }
+.text-bg-secondary { background: var(--tint) !important; color: var(--muted-2) !important; }
+.text-bg-danger    { background: #A6291F !important; color: #fff !important; }
+
+.alert { border-radius: var(--r-card); border-color: var(--sand); font-size: 13px; }
+.alert-light, .alert-secondary { background: var(--tint); color: var(--forest-soft); }
+.alert-warning { background: #FBF3DF; border-color: var(--gold); color: var(--forest-soft); }
+.alert-info { background: var(--tint); border-color: var(--sand); color: var(--forest-soft); }
+
+.spinner-border { color: var(--gold-dark); }
+
+.list-group-item { border-color: var(--tint); background: var(--surface); font-size: 13.5px; }
+
+.toast.text-bg-success { background: var(--forest) !important; color: var(--gold-light) !important; }
+.toast.text-bg-danger  { background: #A6291F !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
